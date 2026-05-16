@@ -72,10 +72,10 @@ class EliteHybridScanner:
         if spy.empty or len(spy) < 200:
             return "UNKNOWN"
         try:
-            close = spy["Close"]
-            ma50 = close.rolling(50).mean().iloc[-1]
-            ma200 = close.rolling(200).mean().iloc[-1]
-            price = close.iloc[-1]
+            close = spy["Close"].squeeze()
+            ma50 = float(close.rolling(50).mean().iloc[-1])
+            ma200 = float(close.rolling(200).mean().iloc[-1])
+            price = float(close.iloc[-1])
             if price > ma50 and price > ma200:
                 return "RISK_ON"
             elif price > ma200:
@@ -128,12 +128,12 @@ class EliteHybridScanner:
             return 0.0
         try:
             period = min(len(data), len(spy), 21)
-            stock_close = data["Close"].dropna()
-            spy_close = spy["Close"].dropna()
+            stock_close = data["Close"].dropna().squeeze()
+            spy_close = spy["Close"].dropna().squeeze()
             if len(stock_close) < period or len(spy_close) < period:
                 return 0.0
-            stock_ret = (stock_close.iloc[-1] / stock_close.iloc[-period] - 1) * 100
-            spy_ret = (spy_close.iloc[-1] / spy_close.iloc[-period] - 1) * 100
+            stock_ret = float((stock_close.iloc[-1] / stock_close.iloc[-period] - 1) * 100)
+            spy_ret = float((spy_close.iloc[-1] / spy_close.iloc[-period] - 1) * 100)
             return stock_ret - spy_ret
         except Exception:
             return 0.0
@@ -143,22 +143,22 @@ class EliteHybridScanner:
         if len(data) < 20:
             return {"is_breakout": False}
 
-        close = data["Close"]
-        high = data["High"]
-        volume = data["Volume"]
+        close = data["Close"].squeeze()
+        high = data["High"].squeeze()
+        volume = data["Volume"].squeeze()
 
         high_20 = high.rolling(20).max()
-        price = close.iloc[-1]
-        prev_high = high_20.iloc[-3]
+        price = float(close.iloc[-1])
+        prev_high = float(high_20.iloc[-3])
 
         is_breakout = price > prev_high
 
-        vol_20_avg = volume.rolling(20).mean().iloc[-1]
-        vol_today = volume.iloc[-1]
+        vol_20_avg = float(volume.rolling(20).mean().iloc[-1])
+        vol_today = float(volume.iloc[-1])
         vol_ratio = vol_today / vol_20_avg if vol_20_avg > 0 else 0
 
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma50 = close.rolling(50).mean().iloc[-1] if len(data) >= 50 else ma20
+        ma20 = float(close.rolling(20).mean().iloc[-1])
+        ma50 = float(close.rolling(50).mean().iloc[-1]) if len(data) >= 50 else ma20
         stop_loss = round(float(ma20), 2)
 
         return {
@@ -174,18 +174,18 @@ class EliteHybridScanner:
         if len(data) < 50:
             return {"aligned": False, "acceleration": 0.0}
 
-        close = data["Close"]
-        ma10 = close.rolling(10).mean().iloc[-1]
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma50 = close.rolling(50).mean().iloc[-1]
-        price = close.iloc[-1]
+        close = data["Close"].squeeze()
+        ma10 = float(close.rolling(10).mean().iloc[-1])
+        ma20 = float(close.rolling(20).mean().iloc[-1])
+        ma50 = float(close.rolling(50).mean().iloc[-1])
+        price = float(close.iloc[-1])
 
         aligned = price > ma10 > ma20 > ma50
 
         ret = close.pct_change()
-        recent_avg = ret.iloc[-10:].mean()
-        prior_avg = ret.iloc[-20:-10].mean()
-        acceleration = float((recent_avg - prior_avg) * 1000)
+        recent_avg = float(ret.iloc[-10:].mean())
+        prior_avg = float(ret.iloc[-20:-10].mean())
+        acceleration = (recent_avg - prior_avg) * 1000
 
         return {
             "aligned": bool(aligned),
@@ -197,17 +197,17 @@ class EliteHybridScanner:
         if len(data) < 20:
             return {"vol_5_20_ratio": 0.0, "accumulating": False}
 
-        volume = data["Volume"]
-        close = data["Close"]
+        volume = data["Volume"].squeeze()
+        close = data["Close"].squeeze()
 
-        vol_5 = volume.rolling(5).mean().iloc[-1]
-        vol_20 = volume.rolling(20).mean().iloc[-1]
+        vol_5 = float(volume.rolling(5).mean().iloc[-1])
+        vol_20 = float(volume.rolling(20).mean().iloc[-1])
         ratio = vol_5 / vol_20 if vol_20 > 0 else 0
 
         up_days = (close.diff() > 0).iloc[-20:]
-        up_vol = volume.iloc[-20:][up_days].mean()
-        down_vol = volume.iloc[-20:][~up_days].mean()
-        accumulating = up_vol > down_vol if pd.notna(up_vol) and pd.notna(down_vol) else False
+        up_vol = float(volume.iloc[-20:][up_days].mean())
+        down_vol = float(volume.iloc[-20:][~up_days].mean())
+        accumulating = up_vol > down_vol if not pd.isna(up_vol) and not pd.isna(down_vol) else False
 
         return {
             "vol_5_20_ratio": round(float(ratio), 2),
